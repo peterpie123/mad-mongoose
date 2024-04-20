@@ -20,6 +20,7 @@ def lambda_handler(event, _):
     Entrypoint for the lambda function.
 
     Event params:
+        unique_id (int)
         repo_url (string)
         branch (string)
         pullrequest_id (int)

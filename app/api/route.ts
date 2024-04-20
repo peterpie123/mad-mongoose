@@ -1,4 +1,4 @@
-import { insertPendingTestRun } from "./utils";
+import { insertPendingTestRun, invokeLambda } from "./utils";
 
 export async function POST(request: Request) {
     const json = await request.json();
@@ -9,11 +9,15 @@ export async function POST(request: Request) {
         });
     }
 
-    let stubRun = {
+    let testRun = {
         repo_url: json.pull_request.head.repo.html_url,
+        clone_url: json.pull_request.head.repo.clone_url,
         pullrequest_id: json.number,
+        branch_name: json.pull_request.head.ref,
     };
-    let id = await insertPendingTestRun(stubRun);
+    let id = await insertPendingTestRun(testRun);
+
+    await invokeLambda({ ...testRun, id });
 
     return new Response(`Created response ${id}`, {
         headers: { "content-type": "text/plain" },
