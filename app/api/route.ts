@@ -10,7 +10,7 @@ export async function POST(request: Request) {
     }
 
     let stubRun = {
-        repo_url: "yoyoyo",
+        repo_url: json.pull_request.head.repo.html_url,
         pullrequest_id: json.number,
     };
     let id = await insertPendingTestRun(stubRun);
