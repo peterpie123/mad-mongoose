@@ -107,6 +107,13 @@ def lambda_handler(event, _):
             print(unit_test_json)
             test_file_path = f"{base_file_path}/{file_name}_{function_information_dict['function_name']}_unit_tests.py"
             write_unit_tests_to_file(completed_template, test_file_path)
+
+            unit_test_source_string = get_file_content(test_file_path)
+
+            try:
+                bucket.put_object(Key=f"{pullrequest_id}/{unique_id}{test_file_path}.txt", Body=unit_test_source_string)
+            except ClientError as e:
+                logging.error(f"Unable to save test results to bucket: {e}")
             test_file_path_without_repo_path = test_file_path.replace(repo_path, "")[1:]
             result_json = run_unit_test(test_file_path_without_repo_path, repo_path)
 
