@@ -1,5 +1,6 @@
 import { createClient } from "@/utils/supabase/server";
 import { LambdaClient, InvokeCommand, LogType } from "@aws-sdk/client-lambda";
+import { getInstallationId } from "./github-utils";
 
 const lambda = new LambdaClient({ region: 'us-east-2' });
 
@@ -49,5 +50,34 @@ export async function invokeLambda(testRun: any, changedFiles: string[]) {
     console.log("Invoking lambda for test run", testRun.id);
     const response = await lambda.send(command);
     return response;
+}
+
+export async function getOrCreateRepo(repoUrl: string): Promise<any> {
+    const supabase = createClient();
+    const { data, error } = await supabase
+        .from("repository")
+        .select()
+        .eq("url", repoUrl);
+
+    if (error) {
+        console.log(error);
+        throw error;
+    }
+
+    if (data.length === 0) {
+        const { data, error } = await supabase
+            .from("repository")
+            .insert([{ url: repoUrl, installation_id: await getInstallationId(repoUrl) }])
+            .select();
+
+        if (error) {
+            console.log(error);
+            throw error;
+        }
+
+        return data[0];
+    }
+
+    return data[0];
 }
 

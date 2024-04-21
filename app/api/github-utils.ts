@@ -14,8 +14,8 @@ function getRepoNameFromUrl(repoUrl: string) {
 }
 
 
-export async function getPRFiles(repoUrl: string, prId: number): Promise<string[]> {
-    const octokit = await app.getInstallationOctokit(49844178)
+export async function getPRFiles(repoUrl: string, prId: number, installationId: number): Promise<string[]> {
+    const octokit = await app.getInstallationOctokit(installationId)
 
     const result = await octokit.request('GET /repos/{owner}/{repo}/pulls/{pull_number}/files', {
         owner: getRepoOwnerFromUrl(repoUrl),
@@ -29,8 +29,8 @@ export async function getPRFiles(repoUrl: string, prId: number): Promise<string[
     return result.data.map((file: any) => file.filename);
 }
 
-export async function leavePRComment(repoUrl: string, prId: number, body: string): Promise<number> {
-    const octokit = await app.getInstallationOctokit(49844178)
+export async function leavePRComment(repoUrl: string, prId: number, body: string, installationId: number): Promise<number> {
+    const octokit = await app.getInstallationOctokit(installationId)
 
     const result = await octokit.request('POST /repos/{owner}/{repo}/issues/{issue_number}/comments', {
         owner: getRepoOwnerFromUrl(repoUrl),
@@ -44,8 +44,8 @@ export async function leavePRComment(repoUrl: string, prId: number, body: string
     return result.data.id;
 }
 
-export async function updatePRComment(repoUrl: string, prId: number, commentId: number, newBody: string): Promise<any> {
-    const octokit = await app.getInstallationOctokit(49844178)
+export async function updatePRComment(repoUrl: string, commentId: number, newBody: string, installationId: number): Promise<any> {
+    const octokit = await app.getInstallationOctokit(installationId)
 
     const result = await octokit.request('PATCH /repos/{owner}/{repo}/issues/comments/{comment_id}', {
         owner: getRepoOwnerFromUrl(repoUrl),
@@ -57,4 +57,16 @@ export async function updatePRComment(repoUrl: string, prId: number, commentId: 
         }
     });
     return result.data;
+}
+
+export async function getInstallationId(repoUrl: string) {
+    const result = await app.octokit.request('GET /repos/{owner}/{repo}/installation', {
+        owner: getRepoOwnerFromUrl(repoUrl),
+        repo: getRepoNameFromUrl(repoUrl),
+        headers: {
+            'X-GitHub-Api-Version': '2022-11-28'
+        }
+    });
+
+    return result.data.id;
 }
