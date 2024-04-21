@@ -63,6 +63,8 @@ def lambda_handler(event, _):
 
     clone_repo(repo_url, repo_path, branch)
 
+    # add_init_file(repo_path)
+
     client = anthropic.Anthropic(api_key=ANTHROPIC_API_KEY)
 
     bucket = get_aws_bucket("mad-mongoose")
@@ -93,7 +95,8 @@ def lambda_handler(event, _):
             print(unit_test_json)
             test_file_path = f"{base_file_path}/{file_name}_{function_information['function_name']}_unit_tests.py"
             write_unit_tests_to_file(completed_template, test_file_path)
-            result_json = run_unit_test(test_file_path)
+            test_file_path_without_repo_path = test_file_path.replace(repo_path, "")[1:]
+            result_json = run_unit_test(test_file_path_without_repo_path,repo_path)
             # test string
 
             aggregate_results[file_path][function_information['function_name']] = result_json
@@ -124,12 +127,15 @@ def lambda_handler(event, _):
     except ClientError as e:
         logging.error(f"Unable to save test results to bucket: {e}")
 
-    requests.patch(API_URL, {
+    print("UNIQUE ID:",  unique_id)
+    patch_request = {
         "id": unique_id,
         "tests_run": result_summary["tests_passed"] + result_summary["tests_failed"],
         "tests_failed": result_summary["tests_failed"],
         "tests_errored": result_summary["error"]
-    })
+    }
+    print(patch_request)
+    requests.patch(API_URL, patch_request)
 
     return {
         'statusCode': 200,
@@ -285,10 +291,7 @@ def create_string_required_imports(json_data, file_name, full_file_path_from_roo
             {"function_name": "add", 
             "function_code": "def add(a, b):\n    return a + cool_function(b)",
             "instructions": "To run the 'add' function, instantiate the MyClass class and call the 'add' method with two arguments. For example: \n   my_class = MyClass()\n    result = my_class.add(1, 2)",
-            "required_imports": ["from my_class_name import MyClass"]},
-            {"function_name": "subtract",
-            "function_code": "def subtract(a, b):\n    return a - b",
-            "instructions": "To run the 'subtract' function, instantiate the MyClass class and call the 'subtract' method with two arguments. For example: \n   my_class = MyClass()\n    result = my_class.subtract(1, 2)",
+            "required_imports": ["from my_class_name import MyClass"]},run_unit_test and call the 'subtract' method with two arguments. For example: \n   my_class = MyClass()\n    result = my_class.subtract(1, 2)",
             "required_imports": ["from my_class_name import subtract"]}
         ]
     }
@@ -310,7 +313,7 @@ def create_string_required_imports(json_data, file_name, full_file_path_from_roo
     return message.content[0].text
 
 
-def run_unit_test(unit_test_file):
+def run_unit_test(unit_test_file,repo_path):
     """
     Run the unit tests in the specified file.
 
@@ -319,8 +322,12 @@ def run_unit_test(unit_test_file):
 
     Returns: JSON object containing the results of the unit tests.
     """
-    result = subprocess.run(["python3", unit_test_file], capture_output=True, text=True)
 
+    parsed_unit_test_file = unit_test_file.replace("/", ".").replace(".py", "")
+    print(parsed_unit_test_file)
+    result = subprocess.run(["python3","-m", parsed_unit_test_file], capture_output=True, text=True, cwd=repo_path)
+    print("STDOUT: ", result.stdout)
+    print("STDERR", result.stderr)
     if result.stderr:
         random.randint(0, 5)
         json_result = {}
@@ -398,11 +405,14 @@ def get_aws_bucket(bucket_name):
 
     return bucket
 
+def add_init_file(file_path):
+    with open(os.path.join(file_path, "__init__.py"), "w") as f:
+        f.write("")
 
 def get_template():
     template = """
 import json
-from $$file_name$$ import *
+from .$$file_name$$ import *
 
 $$unit_tests_code$$
 
