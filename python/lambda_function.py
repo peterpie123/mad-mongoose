@@ -276,9 +276,6 @@ def parse_file_into_functions_and_instructions(client, file_source_code):
         "file_name": "my_class_name"
     }
     </EXAMPLE_SOURCE_CODE>
-def create_string_required_imports(json_data, file_name, full_file_path_from_root):
-    required_imports = json_data["required_imports"]
-    return "\n".join(required_imports)
 
     Return the functions and instructions as JSON in the following format:
 
