@@ -1,4 +1,4 @@
-import { insertPendingTestRun, invokeLambda, updateTestRun } from "./utils";
+import { getPRFiles, insertPendingTestRun, invokeLambda, updateTestRun } from "./utils";
 
 export async function POST(request: Request) {
     const json = await request.json();
@@ -17,7 +17,8 @@ export async function POST(request: Request) {
     };
     let id = await insertPendingTestRun(testRun);
 
-    await invokeLambda({ ...testRun, id });
+    let changedFiles = await getPRFiles(testRun.repo_url, testRun.pullrequest_id);
+    await invokeLambda({ ...testRun, id }, changedFiles);
 
     return new Response(`Created response ${id}`, {
         headers: { "content-type": "text/plain" },
