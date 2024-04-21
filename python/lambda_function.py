@@ -51,12 +51,14 @@ def lambda_handler(event, _):
         branch (string)
         pullrequest_id (int)
         changed_files (list)
+        max_attempts (int, optional)
     """
     unique_id = event['unique_id']
     repo_url = event['repo_url']
     branch = event['branch']
     pullrequest_id = event['pullrequest_id']
     changed_files = event['changed_files']
+    max_attempts = event['max_attempts'] if 'max_attempts' in event else 1
 
     # root_path = event['root_path'] if 'root_path' in event else "/"
     repo_path = f'/tmp/{unique_id}/repo'
@@ -83,23 +85,32 @@ def lambda_handler(event, _):
             "source_code": file_contents
         }
 
-        instruction_string = parse_file_into_functions_and_instructions(client, json.dumps(file_data))
-        instruction_json = json.loads(instruction_string, strict=False)
+        instruction_dict = try_parse_file_into_functions_and_instructions(client, file_data, max_attempts)
 
         aggregate_results[file_path] = {}
 
-        for function_information in instruction_json['functions']:
-            unit_test_json = create_unit_test_json(client, json.dumps(function_information))
+        if "error" in instruction_dict:
+            aggregate_results[file_path]["NO FUNCTION TESTED"] = {"result": False,
+                                                                  "error": "Could not parse file into functions and instructions."}
+            continue
+
+        for function_information_dict in instruction_dict['functions']:
+            unit_test_json = try_create_unit_test_dict(client, function_information_dict, max_attempts)
+
+            if "error" in unit_test_json:
+                aggregate_results[file_path][function_information_dict['function_name']] = {"result": False,
+                                                                                           "error": "Could not create unit test."}
+                continue
+
             template = get_template()
             completed_template = replace_values_in_template(template, unit_test_json, file_name)
             print(unit_test_json)
-            test_file_path = f"{base_file_path}/{file_name}_{function_information['function_name']}_unit_tests.py"
+            test_file_path = f"{base_file_path}/{file_name}_{function_information_dict['function_name']}_unit_tests.py"
             write_unit_tests_to_file(completed_template, test_file_path)
             test_file_path_without_repo_path = test_file_path.replace(repo_path, "")[1:]
             result_json = run_unit_test(test_file_path_without_repo_path, repo_path)
-            # test string
 
-            aggregate_results[file_path][function_information['function_name']] = result_json
+            aggregate_results[file_path][function_information_dict['function_name']] = result_json
 
     result_summary = {}
     result_summary["tests_passed"] = 0
@@ -109,6 +120,11 @@ def lambda_handler(event, _):
     for file in aggregate_results:
         for function in aggregate_results[file]:
             for test_function in aggregate_results[file][function]:
+                if "error" in aggregate_results[file][function]:
+                    result_summary["error"] += 1
+                    result_summary["tests_failed"] += 1
+                    continue
+
                 test_result = aggregate_results[file][function][test_function]
                 if test_result["result"]:
                     result_summary["tests_passed"] += 1
@@ -139,6 +155,28 @@ def lambda_handler(event, _):
         'body': json.dumps('DUMPED')
     }
 
+def try_parse_file_into_functions_and_instructions(client, file_source_code, max_attempts = 1):
+    """
+    Try to parse the source code of a file into functions and instructions.
+    
+    Args:
+        file_source_code: str, the source code of the file.
+    """
+    attempts = 0
+
+    while(attempts < max_attempts):
+        attempts += 1
+        try:
+            file_source_code_dumped = json.dumps(file_source_code)
+            instruction_string =  parse_file_into_functions_and_instructions(client, file_source_code_dumped)
+            instruction_json = json.loads(instruction_string, strict=False)
+            return instruction_json
+        except Exception as e:
+            return {"error": "JSON could not be generated."}
+        
+
+    return instruction_json
+        
 
 def get_file_content(file_path):
     """
@@ -154,9 +192,30 @@ def get_file_content(file_path):
         return file.read()
 
 
-def create_unit_test_json(client, content):
-    unit_test = create_unit_test(client, content)
-    return json.loads(unit_test, strict=False)
+def try_create_unit_test_dict(client, function_information_dict, max_attempts = 1):
+    """
+    Try to create a unit test for a given function.
+    
+    Args:
+        client: anthropic client
+        function_information_dict: dict, the function to create a unit test for
+    """
+    attempts = 0
+    while(attempts < max_attempts):
+        attempts += 1
+
+        try:
+            unit_test_dict = create_unit_test_dict(client, function_information_dict)
+            return unit_test_dict
+        except Exception as e:
+            return {"error": "JSON could not be generated."}
+        
+
+    return {"error": "JSON could not be generated."}
+
+def create_unit_test_dict(client, function_information_dict):
+    unit_test = create_unit_test(client, json.dumps(function_information_dict))
+    return json.loads(unit_test,strict=False)
 
 
 def create_unit_test(client, function):
@@ -284,9 +343,10 @@ def parse_file_into_functions_and_instructions(client, file_source_code):
         "functions": [
             {"function_name": "add", 
             "function_code": "def add(a, b):\n    return a + cool_function(b)",
-            "instructions": "To run the 'add' function, instantiate the MyClass class and call the 'add' method with two arguments. For example: \n   my_class = MyClass()\n    result = my_class.add(1, 2)",
-            "required_imports": ["from my_class_name import MyClass"]},run_unit_test and call the 'subtract' method with two arguments. For example: \n   my_class = MyClass()\n    result = my_class.subtract(1, 2)",
-            "required_imports": ["from my_class_name import subtract"]}
+            "instructions": "To run the 'add' function, instantiate the MyClass class and call the 'add' method with two arguments. For example: \n   my_class = MyClass()\n    result = my_class.add(1, 2)"},
+            {"function_name": "subtract",
+            "function_code": "def subtract(a, b):\n    return a - amazing_function(b)",
+            "instructions": "To run the 'subtract' function, call the 'subtract' method with two arguments. For example: \n    result = subtract(1, 2)"}            
         ]
     }
     </EXAMPLE_JSON>
