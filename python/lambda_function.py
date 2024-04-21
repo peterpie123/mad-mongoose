@@ -9,10 +9,10 @@ import boto3
 import requests
 from botocore.exceptions import ClientError
 
-AWS_ACCESS_KEY_ID = "AKIA2G5UZXNS2WFIG4XH"
-AWS_SECRET_ACCESS_KEY = "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"
 
-ANTHROPIC_API_KEY = "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"
+MY_AWS_ACCESS_KEY_ID = os.environ.get("AWS_ACCESS_KEY_ID")
+MY_AWS_SECRET_ACCESS_KEY = os.environ.get("AWS_SECRET_ACCESS_KEY")
+ANTHROPIC_API_KEY = os.environ.get("ANTHROPIC_API_KEY")
 
 BASE_PATH = "/home/joseph/Documents/Projects/Hackathon"
 TEMPLATE_FULL_PATH = BASE_PATH + "/template.py"
@@ -59,11 +59,11 @@ def lambda_handler(event, _):
     changed_files = event['changed_files']
 
     # root_path = event['root_path'] if 'root_path' in event else "/"
-    repo_path = f'/tmp/{unique_id}'
+    repo_path = f'/tmp/{unique_id}/repo'
 
     clone_repo(repo_url, repo_path, branch)
 
-    # add_init_file(repo_path)
+    add_init_file(repo_path)
 
     client = anthropic.Anthropic(api_key=ANTHROPIC_API_KEY)
 
@@ -321,10 +321,9 @@ def run_unit_test(unit_test_file, repo_path):
     """
 
     parsed_unit_test_file = unit_test_file.replace("/", ".").replace(".py", "")
-    print(parsed_unit_test_file)
-    result = subprocess.run(["python3", "-m", parsed_unit_test_file], capture_output=True, text=True, cwd=repo_path)
-    print("STDOUT: ", result.stdout)
-    print("STDERR", result.stderr)
+
+    result = subprocess.run(["python3", "-m", "repo." + parsed_unit_test_file], capture_output=True, text=True, cwd=repo_path.replace("/repo",""))
+
     if result.stderr:
         random.randint(0, 5)
         json_result = {}
@@ -389,8 +388,8 @@ def get_aws_bucket(bucket_name):
     """
     # Create a session using your AWS credentials
     session = boto3.Session(
-        aws_access_key_id=AWS_ACCESS_KEY_ID,
-        aws_secret_access_key=AWS_SECRET_ACCESS_KEY,
+        aws_access_key_id=MY_AWS_ACCESS_KEY_ID,
+        aws_secret_access_key=MY_AWS_SECRET_ACCESS_KEY,
         region_name='us-east-2'
     )
 
