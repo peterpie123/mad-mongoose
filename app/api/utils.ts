@@ -1,5 +1,6 @@
 import { createClient } from "@/utils/supabase/server";
 import { LambdaClient, InvokeCommand, LogType } from "@aws-sdk/client-lambda";
+import { Provider } from "react";
 
 const lambda = new LambdaClient();
 
@@ -15,6 +16,21 @@ export async function insertPendingTestRun(testRun: any): Promise<number> {
         throw error;
     }
     return data[0].id;
+}
+
+export async function updateTestRun(id: number, testRun: any): Promise<any> {
+    const supabase = createClient();
+    const { data, error } = await supabase
+        .from("testrun")
+        .update(testRun)
+        .eq("id", id).select();
+
+    if (!data) {
+        console.log(error);
+        throw error;
+    }
+
+    return data;
 }
 
 export async function invokeLambda(testRun: any) {

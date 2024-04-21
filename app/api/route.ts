@@ -1,4 +1,4 @@
-import { insertPendingTestRun, invokeLambda } from "./utils";
+import { insertPendingTestRun, invokeLambda, updateTestRun } from "./utils";
 
 export async function POST(request: Request) {
     const json = await request.json();
@@ -21,5 +21,16 @@ export async function POST(request: Request) {
 
     return new Response(`Created response ${id}`, {
         headers: { "content-type": "text/plain" },
+    });
+}
+
+
+export async function PATCH(request: Request) {
+    let json = await request.json();
+
+    const result = await updateTestRun(json.id, json);
+
+    return new Response(JSON.stringify(result), {
+        headers: { "content-type": "application/json" },
     });
 }
