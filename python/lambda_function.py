@@ -9,9 +9,8 @@ import boto3
 import requests
 from botocore.exceptions import ClientError
 
-
-MY_AWS_ACCESS_KEY_ID = os.environ.get("AWS_ACCESS_KEY_ID")
-MY_AWS_SECRET_ACCESS_KEY = os.environ.get("AWS_SECRET_ACCESS_KEY")
+MY_AWS_ACCESS_KEY_ID = os.environ.get("MY_AWS_ACCESS_KEY_ID")
+MY_AWS_SECRET_ACCESS_KEY = os.environ.get("MY_AWS_SECRET_ACCESS_KEY")
 ANTHROPIC_API_KEY = os.environ.get("ANTHROPIC_API_KEY")
 
 BASE_PATH = "/home/joseph/Documents/Projects/Hackathon"
@@ -99,7 +98,7 @@ def lambda_handler(event, _):
 
             if "error" in unit_test_json:
                 aggregate_results[file_path][function_information_dict['function_name']] = {"result": False,
-                                                                                           "error": "Could not create unit test."}
+                                                                                            "error": "Could not create unit test."}
                 continue
 
             template = get_template()
@@ -111,7 +110,8 @@ def lambda_handler(event, _):
             unit_test_source_string = get_file_content(test_file_path)
 
             try:
-                bucket.put_object(Key=f"{pullrequest_id}/{unique_id}{test_file_path}.txt", Body=unit_test_source_string)
+                bucket.put_object(Key=f"{pullrequest_id}/{unique_id}{test_file_path}.txt",
+                                  Body=unit_test_source_string)
             except ClientError as e:
                 logging.error(f"Unable to save test results to bucket: {e}")
             test_file_path_without_repo_path = test_file_path.replace(repo_path, "")[1:]
@@ -162,28 +162,28 @@ def lambda_handler(event, _):
         'body': json.dumps('DUMPED')
     }
 
-def try_parse_file_into_functions_and_instructions(client, file_source_code, max_attempts = 1):
+
+def try_parse_file_into_functions_and_instructions(client, file_source_code, max_attempts=1):
     """
     Try to parse the source code of a file into functions and instructions.
-    
+
     Args:
         file_source_code: str, the source code of the file.
     """
     attempts = 0
 
-    while(attempts < max_attempts):
+    while (attempts < max_attempts):
         attempts += 1
         try:
             file_source_code_dumped = json.dumps(file_source_code)
-            instruction_string =  parse_file_into_functions_and_instructions(client, file_source_code_dumped)
+            instruction_string = parse_file_into_functions_and_instructions(client, file_source_code_dumped)
             instruction_json = json.loads(instruction_string, strict=False)
             return instruction_json
         except Exception as e:
             return {"error": "JSON could not be generated."}
-        
 
     return instruction_json
-        
+
 
 def get_file_content(file_path):
     """
@@ -199,16 +199,16 @@ def get_file_content(file_path):
         return file.read()
 
 
-def try_create_unit_test_dict(client, function_information_dict, max_attempts = 1):
+def try_create_unit_test_dict(client, function_information_dict, max_attempts=1):
     """
     Try to create a unit test for a given function.
-    
+
     Args:
         client: anthropic client
         function_information_dict: dict, the function to create a unit test for
     """
     attempts = 0
-    while(attempts < max_attempts):
+    while (attempts < max_attempts):
         attempts += 1
 
         try:
@@ -216,13 +216,13 @@ def try_create_unit_test_dict(client, function_information_dict, max_attempts = 
             return unit_test_dict
         except Exception as e:
             return {"error": "JSON could not be generated."}
-        
 
     return {"error": "JSON could not be generated."}
 
+
 def create_unit_test_dict(client, function_information_dict):
     unit_test = create_unit_test(client, json.dumps(function_information_dict))
-    return json.loads(unit_test,strict=False)
+    return json.loads(unit_test, strict=False)
 
 
 def create_unit_test(client, function):
@@ -386,7 +386,8 @@ def run_unit_test(unit_test_file, repo_path):
 
     parsed_unit_test_file = unit_test_file.replace("/", ".").replace(".py", "")
 
-    result = subprocess.run(["python3", "-m", "repo." + parsed_unit_test_file], capture_output=True, text=True, cwd=repo_path.replace("/repo",""))
+    result = subprocess.run(["python3", "-m", "repo." + parsed_unit_test_file],
+                            capture_output=True, text=True, cwd=repo_path.replace("/repo", ""))
 
     if result.stderr:
         random.randint(0, 5)
