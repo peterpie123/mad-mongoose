@@ -1,4 +1,4 @@
-import { getPRFiles, leavePRComment } from "./github-utils";
+import { getPRFiles, leavePRComment, updatePRComment } from "./github-utils";
 import { insertPendingTestRun, invokeLambda, updateTestRun } from "./utils";
 
 export async function POST(request: Request) {
@@ -20,8 +20,9 @@ export async function POST(request: Request) {
 
     let changedFiles = await getPRFiles(testRun.repo_url, testRun.pullrequest_id);
     // await invokeLambda({ ...testRun, id }, changedFiles);
-    leavePRComment(testRun.repo_url, testRun.pullrequest_id);
-
+    let commentId = await leavePRComment(testRun.repo_url, testRun.pullrequest_id,
+        `Generating and running tests for PR ${testRun.pullrequest_id}.\n\nIn the meantime why don't you touch grass.`);
+    await updateTestRun(id, { comment_id: commentId });
 
     return new Response(`Created response ${id}`, {
         headers: { "content-type": "text/plain" },
@@ -36,6 +37,8 @@ export async function PATCH(request: Request) {
     let json = await request.json();
 
     const result = await updateTestRun(json.id, json);
+    await updatePRComment(result.repo_url, result.pullrequest_id, result.comment_id, `Tests run: ${json.tests_run}, Tests failed: ${json.tests_failed}.`);
+
 
     return new Response(JSON.stringify(result), {
         headers: { "content-type": "application/json" },

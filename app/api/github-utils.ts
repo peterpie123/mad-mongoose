@@ -29,16 +29,32 @@ export async function getPRFiles(repoUrl: string, prId: number): Promise<string[
     return result.data.map((file: any) => file.filename);
 }
 
-export async function leavePRComment(repoUrl: string, prId: number) {
+export async function leavePRComment(repoUrl: string, prId: number, body: string): Promise<number> {
     const octokit = await app.getInstallationOctokit(49844178)
 
-    await octokit.request('POST /repos/{owner}/{repo}/issues/{issue_number}/comments', {
+    const result = await octokit.request('POST /repos/{owner}/{repo}/issues/{issue_number}/comments', {
         owner: getRepoOwnerFromUrl(repoUrl),
         repo: getRepoNameFromUrl(repoUrl),
         issue_number: prId,
-        body: 'Me too',
+        body: body,
         headers: {
             'X-GitHub-Api-Version': '2022-11-28'
         }
-    })
+    });
+    return result.data.id;
+}
+
+export async function updatePRComment(repoUrl: string, prId: number, commentId: number, newBody: string): Promise<any> {
+    const octokit = await app.getInstallationOctokit(49844178)
+
+    const result = await octokit.request('PATCH /repos/{owner}/{repo}/issues/comments/{comment_id}', {
+        owner: getRepoOwnerFromUrl(repoUrl),
+        repo: getRepoNameFromUrl(repoUrl),
+        comment_id: commentId,
+        body: newBody,
+        headers: {
+            'X-GitHub-Api-Version': '2022-11-28'
+        }
+    });
+    return result.data;
 }

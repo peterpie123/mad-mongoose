@@ -1,6 +1,5 @@
 import { createClient } from "@/utils/supabase/server";
 import { LambdaClient, InvokeCommand, LogType } from "@aws-sdk/client-lambda";
-import { Octokit } from "octokit";
 
 const lambda = new LambdaClient({ region: 'us-east-2' });
 
@@ -30,7 +29,7 @@ export async function updateTestRun(id: number, testRun: any): Promise<any> {
         throw error;
     }
 
-    return data;
+    return data[0];
 }
 
 export async function invokeLambda(testRun: any, changedFiles: string[]) {
