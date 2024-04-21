@@ -51,24 +51,3 @@ export async function invokeLambda(testRun: any, changedFiles: string[]) {
     return response;
 }
 
-function getRepoOwnerFromUrl(repoUrl: string) {
-    return repoUrl.split("/")[3];
-}
-
-function getRepoNameFromUrl(repoUrl: string) {
-    return repoUrl.split("/")[4];
-}
-
-export async function getPRFiles(repoUrl: string, prId: number): Promise<string[]> {
-    const octokit = new Octokit();
-    const result = await octokit.request('GET /repos/{owner}/{repo}/pulls/{pull_number}/files', {
-        owner: getRepoOwnerFromUrl(repoUrl),
-        repo: getRepoNameFromUrl(repoUrl),
-        pull_number: prId,
-        headers: {
-            'X-GitHub-Api-Version': '2022-11-28'
-        }
-    });
-
-    return result.data.map((file: any) => file.filename);
-}
