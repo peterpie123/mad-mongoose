@@ -1,8 +1,7 @@
 import { createClient } from "@/utils/supabase/server";
 import { LambdaClient, InvokeCommand, LogType } from "@aws-sdk/client-lambda";
-import { Provider } from "react";
 
-const lambda = new LambdaClient();
+const lambda = new LambdaClient({ region: 'us-east-2' });
 
 export async function insertPendingTestRun(testRun: any): Promise<number> {
     const supabase = createClient();
@@ -39,15 +38,13 @@ export async function invokeLambda(testRun: any) {
         Payload: JSON.stringify({
             unique_id: testRun.id,
             repo_url: testRun.clone_url,
-            branch_name: testRun.branch_name,
+            branch: testRun.branch_name,
             pullrequest_id: testRun.pullrequest_id,
         }),
         LogType: LogType.Tail,
     });
-    console.log(command);
 
-    const { Payload, LogResult } = await lambda.send(command);
-    const result = Buffer.from(Payload).toString();
-    const logs = Buffer.from(LogResult, "base64").toString();
-    return { logs, result };
+    console.log("Invoking lambda for test run", testRun.id);
+    const response = await lambda.send(command);
+    return response;
 }

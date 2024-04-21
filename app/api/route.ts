@@ -24,7 +24,10 @@ export async function POST(request: Request) {
     });
 }
 
-
+/**
+ * Accepts JSON of the form:
+ * {"id", "tests_run", "tests_failed"}
+ */
 export async function PATCH(request: Request) {
     let json = await request.json();
 
