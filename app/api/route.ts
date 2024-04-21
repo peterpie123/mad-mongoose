@@ -1,11 +1,12 @@
 import { getPRFiles, leavePRComment, updatePRComment } from "./github-utils";
 import { insertPendingTestRun, invokeLambda, updateTestRun } from "./utils";
 
+/** Called by the GitHub webhook for an opened PR. */
 export async function POST(request: Request) {
     const json = await request.json();
 
     if (!["opened", "reopened", "synchronize"].includes(json.action)) {
-        return new Response("Hello World!", {
+        return new Response("Not interested in these changes.", {
             headers: { "content-type": "text/plain" },
         });
     }
