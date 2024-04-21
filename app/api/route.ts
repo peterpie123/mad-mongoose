@@ -4,7 +4,6 @@ import { getOrCreateRepo, insertPendingTestRun, invokeLambda, updateTestRun } fr
 /** Called by the GitHub webhook for an opened PR. */
 export async function POST(request: Request) {
     const json = await request.json();
-    const repo = await getOrCreateRepo(json.repo_url);
 
     if (!["opened", "reopened", "synchronize"].includes(json.action)) {
         return new Response("Not interested in these changes.", {
@@ -18,6 +17,7 @@ export async function POST(request: Request) {
         pullrequest_id: json.number,
         branch_name: json.pull_request.head.ref,
     };
+    const repo = await getOrCreateRepo(testRun.repo_url);
     let id = await insertPendingTestRun(testRun);
 
     let changedFiles = (await getPRFiles(testRun.repo_url, testRun.pullrequest_id, repo.installation_id)).filter((file) => file.endsWith(".py")
