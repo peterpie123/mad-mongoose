@@ -1,5 +1,5 @@
 import { createClient } from "@/utils/supabase/server";
-import { LambdaClient, InvokeCommand } from "@aws-sdk/client-lambda";
+import { LambdaClient, InvokeCommand, LogType } from "@aws-sdk/client-lambda";
 
 const lambda = new LambdaClient();
 
@@ -26,7 +26,9 @@ export async function invokeLambda(testRun: any) {
             branch_name: testRun.branch_name,
             pullrequest_id: testRun.pullrequest_id,
         }),
+        LogType: LogType.Tail,
     });
+    console.log(command);
 
     const { Payload, LogResult } = await lambda.send(command);
     const result = Buffer.from(Payload).toString();
