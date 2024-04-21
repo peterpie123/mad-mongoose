@@ -22,7 +22,7 @@ export async function POST(request: Request) {
     let changedFiles = (await getPRFiles(testRun.repo_url, testRun.pullrequest_id)).filter((file) => file.endsWith(".py")
         && !file.includes("/tests/") &&
         !file.includes("__init__.py"));
-    await invokeLambda({ ...testRun, id }, changedFiles);
+    invokeLambda({ ...testRun, id }, changedFiles);
     let commentId = await leavePRComment(testRun.repo_url, testRun.pullrequest_id,
         `Generating and running tests for PR ${testRun.pullrequest_id}.\n\nIn the meantime why don't you touch grass.`);
     await updateTestRun(id, { comment_id: commentId });

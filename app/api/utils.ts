@@ -43,6 +43,7 @@ export async function invokeLambda(testRun: any, changedFiles: string[]) {
             changed_files: changedFiles,
         }),
         LogType: LogType.Tail,
+        InvocationType: "Event",
     });
 
     console.log("Invoking lambda for test run", testRun.id);
