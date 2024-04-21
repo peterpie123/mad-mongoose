@@ -124,12 +124,12 @@ def lambda_handler(event, _):
     except ClientError as e:
         logging.error(f"Unable to save test results to bucket: {e}")
 
-    requests.patch(API_URL, {
+    requests.patch(API_URL, json.dumps({
         "id": unique_id,
         "tests_run": result_summary["tests_passed"] + result_summary["tests_failed"],
         "tests_failed": result_summary["tests_failed"],
         "tests_errored": result_summary["error"]
-    })
+    }))
 
     return {
         'statusCode': 200,
